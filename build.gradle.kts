@@ -1,7 +1,6 @@
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import com.android.build.gradle.BaseExtension
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
     repositories {
@@ -10,9 +9,10 @@ buildscript {
         maven("https://jitpack.io")
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.3.2")
+        // نسخ مستقرة ومجربة
+        classpath("com.android.tools.build:gradle:8.2.2")
         classpath("com.github.recloudstream:gradle:-SNAPSHOT")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22") 
     }
 }
 
@@ -24,25 +24,20 @@ allprojects {
     }
 }
 
-fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) =
-    extensions.getByName<CloudstreamExtension>("cloudstream").configuration()
-
-fun Project.android(configuration: BaseExtension.() -> Unit) =
-    extensions.getByName<BaseExtension>("android").configuration()
-
 subprojects {
     apply(plugin = "com.android.library")
     apply(plugin = "kotlin-android")
     apply(plugin = "com.lagradost.cloudstream3.gradle")
 
-    cloudstream {
+    configure<CloudstreamExtension> {
         setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/user/repo")
     }
 
-    android {
+    configure<BaseExtension> {
+        namespace = "com.example.lordflix"
+        compileSdkVersion(34)
         defaultConfig {
             minSdk = 21
-            compileSdkVersion(34)
             targetSdk = 34
         }
         compileOptions {
@@ -51,13 +46,13 @@ subprojects {
         }
     }
 
-    tasks.withType<KotlinJvmCompile>().configureEach {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_1_8)
-            freeCompilerArgs.addAll(
-                "-Xno-call-assertions",
-                "-Xno-param-assertions",
-                "-Xno-receiver-assertions"
+    tasks.withType<KotlinCompile> {
+        kotlinOptions {
+            jvmTarget = "1.8"
+            // هذا السطر يحل مشكلة الـ Metadata التي تظهر في الصورة
+            freeCompilerArgs = freeCompilerArgs + listOf(
+                "-Xsuppress-version-warnings",
+                "-Xskip-metadata-version-check"
             )
         }
     }
@@ -65,13 +60,8 @@ subprojects {
     dependencies {
         val implementation by configurations
         implementation("com.github.recloudstream.cloudstream:library:-SNAPSHOT")
-        implementation(kotlin("stdlib"))
+        implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
         implementation("com.github.Blatzar:NiceHttp:0.4.11")
         implementation("org.jsoup:jsoup:1.17.2")
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.1")
     }
-}
-
-task<Delete>("clean") {
-    delete(rootProject.layout.buildDirectory)
 }
