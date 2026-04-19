@@ -1,5 +1,5 @@
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import com.android.build.gradle.BaseExtension
+import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
@@ -9,10 +9,9 @@ buildscript {
         maven("https://jitpack.io")
     }
     dependencies {
-        // نسخ مستقرة ومجربة
-        classpath("com.android.tools.build:gradle:8.2.2")
+        classpath("com.android.tools.build:gradle:8.2.0")
         classpath("com.github.recloudstream:gradle:-SNAPSHOT")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22") 
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.20")
     }
 }
 
@@ -36,20 +35,21 @@ subprojects {
     configure<BaseExtension> {
         namespace = "com.example.lordflix"
         compileSdkVersion(34)
+
         defaultConfig {
             minSdk = 21
             targetSdk = 34
         }
+
         compileOptions {
             sourceCompatibility = JavaVersion.VERSION_1_8
             targetCompatibility = JavaVersion.VERSION_1_8
         }
     }
 
-    tasks.withType<KotlinCompile> {
+    tasks.withType<KotlinCompile>().configureEach {
         kotlinOptions {
             jvmTarget = "1.8"
-            // هذا السطر يحل مشكلة الـ Metadata التي تظهر في الصورة
             freeCompilerArgs = freeCompilerArgs + listOf(
                 "-Xsuppress-version-warnings",
                 "-Xskip-metadata-version-check"
@@ -60,8 +60,9 @@ subprojects {
     dependencies {
         val implementation by configurations
         implementation("com.github.recloudstream.cloudstream:library:-SNAPSHOT")
-        implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
+        implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.20")
         implementation("com.github.Blatzar:NiceHttp:0.4.11")
         implementation("org.jsoup:jsoup:1.17.2")
+        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.1")
     }
 }
