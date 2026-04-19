@@ -11,7 +11,7 @@ buildscript {
     dependencies {
         classpath("com.android.tools.build:gradle:8.2.0")
         classpath("com.github.recloudstream:gradle:-SNAPSHOT")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.20")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
     }
 }
 
@@ -35,12 +35,10 @@ subprojects {
     configure<BaseExtension> {
         namespace = "com.example.lordflix"
         compileSdkVersion(34)
-
         defaultConfig {
             minSdk = 21
             targetSdk = 34
         }
-
         compileOptions {
             sourceCompatibility = JavaVersion.VERSION_1_8
             targetCompatibility = JavaVersion.VERSION_1_8
@@ -60,9 +58,8 @@ subprojects {
     dependencies {
         val implementation by configurations
         implementation("com.github.recloudstream.cloudstream:library:-SNAPSHOT")
-        implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.20")
+        implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
         implementation("com.github.Blatzar:NiceHttp:0.4.11")
         implementation("org.jsoup:jsoup:1.17.2")
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.1")
     }
 }
