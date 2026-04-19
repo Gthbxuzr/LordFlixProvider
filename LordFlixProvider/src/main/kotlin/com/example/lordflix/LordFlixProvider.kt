@@ -1,3 +1,49 @@
+package com.example.lordflix
+
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
+import org.jsoup.nodes.Element
+
+class LordFlixProvider : MainAPI() {
+    override var mainUrl = "https://lordflix.org"
+    override var name = "LordFlix"
+    override val hasMainPage = true
+    override var lang = "ar"
+    override val hasDownloadSupport = true
+    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
+
+    override val mainPage = mainPageOf(
+        "$mainUrl/movies/" to "Movies",
+        "$mainUrl/series/" to "Series",
+    )
+
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val url = if (page == 1) request.data else "${request.data}page/$page/"
+        val doc = app.get(url).document
+        val items = doc.select("article.item, .movie-item").mapNotNull {
+            val title = it.selectFirst("h2, h3, .title")?.text()?.trim() ?: return@mapNotNull null
+            val href = it.selectFirst("a")?.attr("abs:href") ?: return@mapNotNull null
+            val poster = it.selectFirst("img")?.attr("src")
+            newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = poster }
+        }
+        return newHomePageResponse(request.name, items)
+    }
+
+    override suspend fun search(query: String): List<SearchResponse> {
+        val doc = app.get("$mainUrl/?s=${query.replace(" ", "+")}").document
+        return doc.select("article.item").mapNotNull {
+            val title = it.selectFirst("h2, h3")?.text() ?: return@mapNotNull null
+            val href = it.selectFirst("a")?.attr("abs:href") ?: return@mapNotNull null
+            newMovieSearchResponse(title, href, TvType.Movie)
+        }
+    }
+
+    override suspend fun load(url: String): LoadResponse? {
+        val doc = app.get(url).document
+        val title = doc.selectFirst("h1")?.text()?.trim() ?: return null
+        return newMovieLoadResponse(title, url, TvType.Movie, url)
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -5,94 +51,10 @@
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val doc = app.get(data).document
-        
-        // جلب الروابط من iframes
         doc.select("iframe").forEach { iframe ->
-            val src = iframe.attr("src").ifEmpty { iframe.attr("data-src") }
+            val src = iframe.attr("src")
             if (src.isNotBlank()) loadExtractor(src, data, subtitleCallback, callback)
         }
-
-        // جلب الروابط المباشرة (m3u8 / mp4)
-        doc.select("source[src], video[src]").forEach { el ->
-            val src = el.attr("src")
-            if (src.contains(".m3u8") || src.contains(".mp4")) {
-                callback.invoke(
-                    ExtractorLink(
-                        source  = name,
-                        name    = name,
-                        url     = src,
-                        referer = mainUrl,
-                        quality = Qualities.Unknown.value,
-                        type    = if (src.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                    )
-                )
-            }
-        }
-
-        // البحث عن الروابط داخل السكريبتات
-        val scripts = doc.select("script:not([src])").joinToString("\n") { it.data() }
-        Regex("""["'](https?://[^"']+\.(?:m3u8|mp4)[^"']*)["']""")
-            .findAll(scripts).forEach { match ->
-                val videoUrl = match.groupValues[1]
-                callback.invoke(
-                    ExtractorLink(
-                        source  = name,
-                        name    = name,
-                        url     = videoUrl,
-                        referer = mainUrl,
-                        quality = Qualities.Unknown.value,
-                        type    = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                    )
-                )
-            }
-        return true
-    }
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val doc = app.get(data, headers = ua).document
-
-        doc.select("iframe[src], iframe[data-src]").forEach { iframe ->
-            val src = iframe.attr("src").ifEmpty { iframe.attr("data-src") }
-            if (src.isNotBlank()) loadExtractor(src, data, subtitleCallback, callback)
-        }
-
-        doc.select("source[src], video[src]").forEach { el ->
-            val src = el.attr("src")
-            if (src.contains(".m3u8") || src.contains(".mp4")) {
-                callback.invoke(
-                    newExtractorLink(
-                        source = name,
-                        name   = name,
-                        url    = src
-                    ) {
-                        this.referer = mainUrl
-                        this.quality = Qualities.Unknown.value
-                        this.isM3u8  = src.contains(".m3u8")
-                    }
-                )
-            }
-        }
-
-        val scripts = doc.select("script:not([src])").joinToString("\n") { it.data() }
-        Regex("""["'](https?://[^"']+\.(?:m3u8|mp4)[^"']*)["']""")
-            .findAll(scripts).forEach { match ->
-                val videoUrl = match.groupValues[1]
-                callback.invoke(
-                    newExtractorLink(
-                        source = name,
-                        name   = name,
-                        url    = videoUrl
-                    ) {
-                        this.referer = mainUrl
-                        this.quality = Qualities.Unknown.value
-                        this.isM3u8  = videoUrl.contains(".m3u8")
-                    }
-                )
-            }
-
         return true
     }
 }
